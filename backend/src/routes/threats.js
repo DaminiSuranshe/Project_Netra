@@ -4,100 +4,139 @@ const axios = require("axios");
 const xml2js = require("xml2js");
 const Threat = require("../models/Threat");
 
-// Load API keys
+// Load API keys from .env
 const { ABUSEIPDB_KEY, OTX_KEY, VT_KEY } = process.env;
 
-// -----------------------------
-// FETCH THREAT FEEDS
-// -----------------------------
+/**
+ * GET /api/threats/fetch
+ * Fetches latest threats from AbuseIPDB, AlienVault OTX, VirusTotal, and CISA RSS
+ */
 router.get("/fetch", async (req, res) => {
   try {
     const threats = [];
 
     // -----------------------------
-    // 1️⃣ AbuseIPDB - top 10 malicious IPs
+    // 1️⃣ AbuseIPDB (Top Malicious IPs)
     // -----------------------------
-    const abuseRes = await axios.get(
-      "https://api.abuseipdb.com/api/v2/blacklist",
-      {
-        headers: { Key: ABUSEIPDB_KEY, Accept: "application/json" },
-        params: { limit: 10 }
-      }
-    );
+    try {
+      const abuseRes = await axios.get(
+        "https://api.abuseipdb.com/api/v2/blacklist",
+        {
+          headers: { Key: ABUSEIPDB_KEY, Accept: "application/json" },
+          params: { limit: 10 },
+        }
+      );
 
-    abuseRes.data.data.forEach(ip => {
-      threats.push({
-        source: "AbuseIPDB",
-        type: "IP",
-        indicator: ip.ipAddress,
-        description: ip.description,
-        severity: ip.abuseConfidenceScore > 50 ? "High" : "Medium",
-        date: new Date()
-      });
-    });
-
-    // -----------------------------
-    // 2️⃣ AlienVault OTX - top 10 pulses
-    // -----------------------------
-    const otxRes = await axios.get(
-      "https://otx.alienvault.com/api/v1/pulses/subscribed",
-      { headers: { "X-OTX-API-KEY": OTX_KEY } }
-    );
-
-    otxRes.data.pulses.slice(0, 10).forEach(pulse => {
-      pulse.indicators.slice(0, 5).forEach(indicator => {
-        threats.push({
-          source: "OTX",
-          type: indicator.type,
-          indicator: indicator.indicator,
-          description: pulse.name,
-          severity: "Medium",
-          date: new Date(pulse.created)
+      if (Array.isArray(abuseRes.data?.data)) {
+        abuseRes.data.data.forEach((ip) => {
+          threats.push({
+            source: "AbuseIPDB",
+            type: "IP",
+            indicator: ip.ipAddress,
+            description: ip.countryCode || "Reported malicious IP",
+            severity: ip.abuseConfidenceScore > 50 ? "High" : "Medium",
+            date: new Date(),
+          });
         });
+      }
+    } catch (err) {
+      console.error("❌ AbuseIPDB Error:", err.response?.data || err.message);
+    }
+
+    // -----------------------------
+    // 2️⃣ AlienVault OTX (Subscribed Pulses → fallback to Public)
+    // -----------------------------
+    try {
+      const otxRes = await axios.get(
+        "https://otx.alienvault.com/api/v1/pulses/subscribed",
+        { headers: { "X-OTX-API-KEY": OTX_KEY } }
+      );
+
+      let pulses = [];
+      if (Array.isArray(otxRes.data?.pulses)) {
+        pulses = otxRes.data.pulses.slice(0, 5);
+      } else if (Array.isArray(otxRes.data?.results)) {
+        pulses = otxRes.data.results.slice(0, 5);
+      }
+
+      (pulses || []).forEach((pulse) => {
+        if (Array.isArray(pulse.indicators)) {
+          pulse.indicators.slice(0, 5).forEach((indicator) => {
+            threats.push({
+              source: "AlienVault OTX",
+              type: indicator.type,
+              indicator: indicator.indicator,
+              description: pulse.name || "OTX Pulse",
+              severity: "Medium",
+              date: new Date(pulse.created || Date.now()),
+            });
+          });
+        }
       });
-    });
+    } catch (err) {
+      console.error("❌ OTX Error:", err.response?.data || err.message);
+    }
 
     // -----------------------------
-    // 3️⃣ VirusTotal - sample IP report
+    // 3️⃣ VirusTotal (Example IP lookup)
     // -----------------------------
-    const vtRes = await axios.get(
-      "https://www.virustotal.com/api/v3/ip_addresses/8.8.8.8", // example IP
-      { headers: { "x-apikey": VT_KEY } }
-    );
+    try {
+      const vtRes = await axios.get(
+        "https://www.virustotal.com/api/v3/ip_addresses/8.8.8.8",
+        { headers: { "x-apikey": VT_KEY } }
+      );
 
-    threats.push({
-      source: "VirusTotal",
-      type: "IP",
-      indicator: vtRes.data.data.id,
-      description: "VirusTotal analysis",
-      severity: "Medium",
-      date: new Date()
-    });
+      if (vtRes.data?.data?.id) {
+        threats.push({
+          source: "VirusTotal",
+          type: "IP",
+          indicator: vtRes.data.data.id,
+          description: "VirusTotal analysis for 8.8.8.8",
+          severity: "Medium",
+          date: new Date(),
+        });
+      }
+    } catch (err) {
+      console.error("❌ VirusTotal Error:", err.response?.data || err.message);
+    }
 
     // -----------------------------
     // 4️⃣ CISA RSS Feed
     // -----------------------------
-    const cisaRes = await axios.get("https://www.cisa.gov/uscert/ncas/alerts.xml");
-    const parsed = await xml2js.parseStringPromise(cisaRes.data);
-    parsed.rss.channel[0].item.slice(0, 5).forEach(item => {
-      threats.push({
-        source: "CISA",
-        type: "Advisory",
-        indicator: item.title[0],
-        description: item.description[0],
-        severity: "High",
-        date: new Date(item.pubDate[0])
+    try {
+      const cisaRes = await axios.get(
+        "https://www.cisa.gov/uscert/ncas/alerts.xml"
+      );
+      const parsed = await xml2js.parseStringPromise(cisaRes.data);
+
+      const items = parsed?.rss?.channel?.[0]?.item || [];
+      items.slice(0, 5).forEach((item) => {
+        threats.push({
+          source: "CISA",
+          type: "Advisory",
+          indicator: item.title?.[0] || "No title",
+          description: item.description?.[0] || "No description",
+          severity: "High",
+          date: new Date(item.pubDate?.[0] || Date.now()),
+        });
       });
-    });
+    } catch (err) {
+      console.error("❌ CISA Error:", err.response?.data || err.message);
+    }
 
     // -----------------------------
     // Save to MongoDB
     // -----------------------------
-    await Threat.insertMany(threats);
+    if (threats.length > 0) {
+      await Threat.insertMany(threats);
+    }
 
-    res.json({ message: "Threat feeds fetched and stored", count: threats.length });
+    res.json({
+      message: "✅ Threat feeds fetched and stored",
+      count: threats.length,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("❌ Threat Fetch Error:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
