@@ -44,6 +44,16 @@ app.use("/api/protected", protectedRoute);
 const threatRoute = require("./routes/threats");
 app.use("/api/threats", threatRoute);
 
+const authRoutes = require("./routes/auth");
+const authMiddleware = require("./middleware/authMiddleware");
+
+// Auth routes
+app.use("/api/auth", authRoutes);
+
+// Protect your threat fetch route
+const threatRoutes = require("./routes/threats");
+app.use("/api/threats", authMiddleware, threatRoutes);
+
 // Temporary test route: Insert & Retrieve threats
 app.get("/api/testdb", async (req, res) => {
   try {
@@ -66,3 +76,6 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Backend running on http://localhost:${PORT}`);
 });
+
+
+
