@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTI Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen">
+
+  <h1 class="text-3xl font-bold mb-6">Cyber Threat Intelligence Analyzer</h1>
+
+  <button id="checkHealth" 
+    class="px-6 py-3 bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+    Check Backend Health
+  </button>
+
+  <p id="healthStatus" class="mt-4 text-lg"></p>
+
+  <script>
+    document.getElementById("checkHealth").addEventListener("click", async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/health");
+        const data = await res.json();
+        document.getElementById("healthStatus").innerText = 
+          `✅ ${data.message} (at ${data.timestamp})`;
+      } catch (error) {
+        document.getElementById("healthStatus").innerText = "❌ Backend not reachable";
+      }
+    });
+  </script>
+
+</body>
+</html>
