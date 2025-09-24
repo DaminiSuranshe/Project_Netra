@@ -40,6 +40,10 @@ app.use("/api/auth", authRoute);
 const protectedRoute = require("./routes/protected");
 app.use("/api/protected", protectedRoute);
 
+// Threat routes
+const threatRoute = require("./routes/threats");
+app.use("/api/threats", threatRoute);
+
 // Temporary test route: Insert & Retrieve threats
 app.get("/api/testdb", async (req, res) => {
   try {

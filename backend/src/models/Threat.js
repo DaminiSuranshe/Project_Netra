@@ -1,8 +1,11 @@
 const mongoose = require("mongoose");
 
 const threatSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  severity: { type: String, required: true },
+  source: { type: String, required: true }, // AbuseIPDB, OTX, VirusTotal, CISA
+  type: { type: String }, // IP, Domain, Hash, etc.
+  indicator: { type: String, required: true },
+  description: { type: String },
+  severity: { type: String },
   date: { type: Date, default: Date.now },
 });
 
