@@ -42,6 +42,7 @@
     <div id="threatsContainer" class="mt-5 overflow-x-auto"></div>
     </div>
 
+    <script src="auth/api.js"></script>
     <script>
     document
         .getElementById("fetchThreatsBtn")
@@ -50,23 +51,14 @@
         container.innerHTML = "⏳ Fetching threats...";
 
         try {
-            const res = await fetch("http://localhost:5000/api/threats/fetch");
-            const data = await res.json();
-
-            if (!res.ok) {
-            container.innerHTML = `<p class="text-red-500">❌ Error: ${data.error}</p>`;
-            return;
-            }
-
-            // Show results
-            container.innerHTML = `
-            <p class="mb-3">✅ ${data.count} threats fetched</p>
-            `;
+            const data = await apiFetch("threats/fetch"); // automatically adds JWT
+            container.innerHTML = `<p>✅ ${data.count} threats fetched</p>`;
         } catch (err) {
-            container.innerHTML = `<p class="text-red-500">❌ Backend not reachable</p>`;
+            container.innerHTML = `<p class="text-red-500">❌ ${err.message}</p>`;
         }
         });
     </script>
+
 
 
 </body>

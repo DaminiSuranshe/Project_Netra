@@ -5,19 +5,28 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db");
-const Threat = require("./models/Threat");
+
+// Routes
+const threatRoutes = require("./routes/threats");
+const correlateRoutes = require("./routes/correlate"); // Phase 6
+const iocRoutes = require("./routes/ioc");
+const authRoutes = require("./routes/auth");
+const healthRoute = require("./routes/health");
+
+// Middleware
+const authMiddleware = require("./middleware/authMiddleware");
 
 // ----------------------
 // CONFIGURATION
 // ----------------------
 dotenv.config();
-const app = express(); // Must be initialized BEFORE using app.use/app.get
+const app = express(); // Must be initialized first
 
 // ----------------------
 // MIDDLEWARE
 // ----------------------
-app.use(cors()); // Allow frontend to fetch backend
-app.use(express.json()); // Parse JSON bodies
+app.use(cors());
+app.use(express.json());
 
 // ----------------------
 // DATABASE CONNECTION
@@ -27,34 +36,23 @@ connectDB();
 // ----------------------
 // ROUTES
 // ----------------------
-
-// Health check route
-const healthRoute = require("./routes/health");
 app.use("/api/health", healthRoute);
-
-// Auth routes
-const authRoute = require("./routes/auth");
-app.use("/api/auth", authRoute);
-
-// Protected route
-const protectedRoute = require("./routes/protected");
-app.use("/api/protected", protectedRoute);
-
-// Threat routes
-const threatRoute = require("./routes/threats");
-app.use("/api/threats", threatRoute);
-
-const authRoutes = require("./routes/auth");
-const authMiddleware = require("./middleware/authMiddleware");
-
-// Auth routes
 app.use("/api/auth", authRoutes);
 
-// Protect your threat fetch route
-const threatRoutes = require("./routes/threats");
+// Protected threat fetch route
 app.use("/api/threats", authMiddleware, threatRoutes);
 
-// Temporary test route: Insert & Retrieve threats
+// Correlation routes
+app.use("/api/threats", correlateRoutes);
+
+// IOC routes
+app.use("/api/ioc", iocRoutes);
+
+// ----------------------
+// TEMP TEST ROUTE
+// ----------------------
+const Threat = require("./models/Threat");
+
 app.get("/api/testdb", async (req, res) => {
   try {
     // Insert sample threat
@@ -76,6 +74,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Backend running on http://localhost:${PORT}`);
 });
-
-
-

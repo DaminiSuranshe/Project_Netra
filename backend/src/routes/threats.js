@@ -8,6 +8,20 @@ const Threat = require("../models/Threat");
 const { ABUSEIPDB_KEY, OTX_KEY, VT_KEY } = process.env;
 
 /**
+ * GET /api/threats
+ * Returns all stored threats
+ * Protected route (requires JWT)
+ */
+router.get("/", async (req, res) => {
+  try {
+    const threats = await Threat.find().sort({ date: -1 }).limit(50); // latest 50
+    res.json(threats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * GET /api/threats/fetch
  * Fetches latest threats from AbuseIPDB, AlienVault OTX, VirusTotal, and CISA RSS
  */
