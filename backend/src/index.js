@@ -5,22 +5,21 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db");
+const Threat = require("./models/Threat");
 
-// Routes
+// Routes (import each only once)
 const threatRoutes = require("./routes/threats");
-const correlateRoutes = require("./routes/correlate"); // Phase 6
 const iocRoutes = require("./routes/ioc");
-const authRoutes = require("./routes/auth");
+const correlateRoutes = require("./routes/correlate");
 const healthRoute = require("./routes/health");
-
-// Middleware
-const authMiddleware = require("./middleware/authMiddleware");
+const authRoutes = require("./routes/auth");
+const protectedRoute = require("./routes/protected");
 
 // ----------------------
 // CONFIGURATION
 // ----------------------
 dotenv.config();
-const app = express(); // Must be initialized first
+const app = express();
 
 // ----------------------
 // MIDDLEWARE
@@ -29,38 +28,27 @@ app.use(cors());
 app.use(express.json());
 
 // ----------------------
+// ROUTES
+// ----------------------
+app.use("/api/ioc", iocRoutes);
+app.use("/api/threats", threatRoutes);       // Phase 3 + 4 threat fetch & storage
+app.use("/api/correlate", correlateRoutes); // Phase 6 enrichment
+app.use("/api/health", healthRoute);
+app.use("/api/auth", authRoutes);
+app.use("/api/protected", protectedRoute);
+
+// ----------------------
 // DATABASE CONNECTION
 // ----------------------
 connectDB();
 
 // ----------------------
-// ROUTES
+// TEMP TEST ROUTE (Insert & Retrieve Threats)
 // ----------------------
-app.use("/api/health", healthRoute);
-app.use("/api/auth", authRoutes);
-
-// Protected threat fetch route
-app.use("/api/threats", authMiddleware, threatRoutes);
-
-// Correlation routes
-app.use("/api/threats", correlateRoutes);
-
-// IOC routes
-app.use("/api/ioc", iocRoutes);
-
-// ----------------------
-// TEMP TEST ROUTE
-// ----------------------
-const Threat = require("./models/Threat");
-
 app.get("/api/testdb", async (req, res) => {
   try {
-    // Insert sample threat
     const threat = await Threat.create({ name: "Malware XYZ", severity: "High" });
-
-    // Retrieve all threats
     const threats = await Threat.find();
-
     res.json({ inserted: threat, allThreats: threats });
   } catch (error) {
     res.status(500).json({ error: error.message });
