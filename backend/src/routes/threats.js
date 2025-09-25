@@ -4,6 +4,7 @@ const axios = require("axios");
 const xml2js = require("xml2js");
 const Threat = require("../models/Threat");
 const { Parser } = require("json2csv"); 
+const ExcelJS = require("exceljs"); 
 
 // Load API keys from .env
 const { ABUSEIPDB_KEY, OTX_KEY, VT_KEY } = process.env;
@@ -238,6 +239,70 @@ router.get("/export", async (req, res) => {
     res.header("Content-Type", "text/csv");
     res.attachment("threats_export.csv");
     return res.send(csv);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 🔹 Export threats as Excel
+router.get("/export/excel", async (req, res) => {
+  try {
+    const { query, severity, source, startDate, endDate } = req.query;
+
+    let filter = {};
+
+    if (query) {
+      filter.$or = [
+        { ip: { $regex: query, $options: "i" } },
+        { domain: { $regex: query, $options: "i" } },
+        { hash: { $regex: query, $options: "i" } },
+        { name: { $regex: query, $options: "i" } }
+      ];
+    }
+    if (severity) filter.severity = severity;
+    if (source) filter.source = source;
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const threats = await Threat.find(filter).sort({ createdAt: -1 });
+
+    if (!threats.length) {
+      return res.status(404).json({ error: "No threats found to export" });
+    }
+
+    // Create workbook & sheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Threats");
+
+    // Define columns
+    worksheet.columns = [
+      { header: "Name", key: "name", width: 25 },
+      { header: "IP", key: "ip", width: 20 },
+      { header: "Domain", key: "domain", width: 25 },
+      { header: "Hash", key: "hash", width: 40 },
+      { header: "Severity", key: "severity", width: 15 },
+      { header: "Source", key: "source", width: 20 },
+      { header: "Created At", key: "createdAt", width: 25 }
+    ];
+
+    // Add rows
+    threats.forEach(t => worksheet.addRow(t.toObject()));
+
+    // Format header row
+    worksheet.getRow(1).font = { bold: true };
+
+    // Send file
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader("Content-Disposition", "attachment; filename=threats_export.xlsx");
+
+    await workbook.xlsx.write(res);
+    res.end();
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

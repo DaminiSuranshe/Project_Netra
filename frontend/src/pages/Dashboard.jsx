@@ -52,6 +52,26 @@ const Dashboard = () => {
     }
   };
 
+  const handleExportExcel = async () => {
+  try {
+    const params = { query, severity, source, startDate, endDate };
+    const response = await axios.get("http://localhost:5000/api/threats/export/excel", {
+      params,
+      responseType: "blob"
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "threats_export.xlsx");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.error("Excel export failed:", error);
+  }
+};
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">Threat Intelligence Dashboard</h2>
@@ -108,6 +128,10 @@ const Dashboard = () => {
 
     <button onClick={handleExport} className="bg-green-500 text-white px-4 py-2 rounded mt-4">
       Export CSV
+    </button>
+
+    <button onClick={handleExportExcel} className="bg-blue-500 text-white px-4 py-2 rounded ml-2">
+      Export Excel
     </button>
   </div>
 );
