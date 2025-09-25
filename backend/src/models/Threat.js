@@ -7,8 +7,15 @@ const ThreatSchema = new mongoose.Schema({
   description: { type: String },
   severity: { type: String, default: "Medium" },
   date: { type: Date, default: Date.now },
-
   // Phase 6 fields
+  geo: {
+    country: String,
+    region: String,
+    city: String,
+    latitude: Number,
+    longitude: Number,
+  },
+  confidenceScore: { type: Number, default: 50 },
   geo: {
     country: String,
     region: String,
