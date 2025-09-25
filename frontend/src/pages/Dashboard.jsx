@@ -32,6 +32,26 @@ const Dashboard = () => {
     fetchThreats();
   };
 
+  const handleExport = async () => {
+    try {
+      const params = { query, severity, source, startDate, endDate };
+      const response = await axios.get("http://localhost:5000/api/threats/export", {
+        params,
+        responseType: "blob"
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "threats_export.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Export failed:", error);
+    }
+  };
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">Threat Intelligence Dashboard</h2>
@@ -56,6 +76,7 @@ const Dashboard = () => {
       </div>
 
       <button onClick={handleSearch} className="bg-blue-500 text-white px-4 py-2 rounded">Search</button>
+      <button onClick={handleExport} className="bg-green-500 text-white px-4 py-2 rounded ml-2">Export CSV</button>
 
       {/* Threats Table */}
       <table className="w-full mt-6 border-collapse border border-gray-300">
@@ -67,44 +88,29 @@ const Dashboard = () => {
             <th className="border p-2">Date</th>
           </tr>
         </thead>
-        <tbody>
-          {threats.length > 0 ? (
-            threats.map((threat) => (
-              <tr key={threat._id}>
-                <td className="border p-2">{threat.name}</td>
-                <td className="border p-2">{threat.severity}</td>
-                <td className="border p-2">{threat.source}</td>
-                <td className="border p-2">{new Date(threat.createdAt).toLocaleString()}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="4" className="text-center p-4">No threats found.</td>
+      <tbody>
+        {threats.length > 0 ? (
+          threats.map((threat) => (
+            <tr key={threat._id}>
+              <td className="border p-2">{threat.name}</td>
+              <td className="border p-2">{threat.severity}</td>
+              <td className="border p-2">{threat.source}</td>
+              <td className="border p-2">{new Date(threat.createdAt).toLocaleString()}</td>
             </tr>
-          )}
-        </tbody>
-      </table>
+          ))
+        ) : (
+          <tr>
+            <td colSpan="4" className="text-center p-4">No threats found.</td>
+          </tr>
+        )}
+      </tbody>
+    </table>
 
-      {/* Pagination */}
-      <div className="flex justify-between items-center mt-4">
-        <button
-          disabled={page <= 1}
-          onClick={() => setPage(page - 1)}
-          className={`px-4 py-2 rounded ${page <= 1 ? "bg-gray-300" : "bg-blue-500 text-white"}`}
-        >
-          Prev
-        </button>
-        <span>Page {page} of {totalPages}</span>
-        <button
-          disabled={page >= totalPages}
-          onClick={() => setPage(page + 1)}
-          className={`px-4 py-2 rounded ${page >= totalPages ? "bg-gray-300" : "bg-blue-500 text-white"}`}
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  );
+    <button onClick={handleExport} className="bg-green-500 text-white px-4 py-2 rounded mt-4">
+      Export CSV
+    </button>
+  </div>
+);
 };
 
 export default Dashboard;

@@ -3,6 +3,7 @@ const router = express.Router();
 const axios = require("axios");
 const xml2js = require("xml2js");
 const Threat = require("../models/Threat");
+const { Parser } = require("json2csv"); 
 
 // Load API keys from .env
 const { ABUSEIPDB_KEY, OTX_KEY, VT_KEY } = process.env;
@@ -196,6 +197,47 @@ router.get("/search", async (req, res) => {
       page: parseInt(page),
       totalPages: Math.ceil(total / limit)
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 🔹 Export threats as CSV
+router.get("/export", async (req, res) => {
+  try {
+    const { query, severity, source, startDate, endDate } = req.query;
+
+    let filter = {};
+
+    if (query) {
+      filter.$or = [
+        { ip: { $regex: query, $options: "i" } },
+        { domain: { $regex: query, $options: "i" } },
+        { hash: { $regex: query, $options: "i" } },
+        { name: { $regex: query, $options: "i" } }
+      ];
+    }
+    if (severity) filter.severity = severity;
+    if (source) filter.source = source;
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const threats = await Threat.find(filter).sort({ createdAt: -1 });
+
+    if (!threats.length) {
+      return res.status(404).json({ error: "No threats found to export" });
+    }
+
+    const fields = ["name", "ip", "domain", "hash", "severity", "source", "createdAt"];
+    const parser = new Parser({ fields });
+    const csv = parser.parse(threats);
+
+    res.header("Content-Type", "text/csv");
+    res.attachment("threats_export.csv");
+    return res.send(csv);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
