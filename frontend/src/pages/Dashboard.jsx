@@ -8,13 +8,16 @@ const Dashboard = () => {
   const [source, setSource] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const fetchThreats = async () => {
     try {
       const response = await axios.get("http://localhost:5000/api/threats/search", {
-        params: { query, severity, source, startDate, endDate }
+        params: { query, severity, source, startDate, endDate, page, limit: 5 }
       });
-      setThreats(response.data);
+      setThreats(response.data.threats);
+      setTotalPages(response.data.totalPages);
     } catch (error) {
       console.error("Error fetching threats:", error);
     }
@@ -22,9 +25,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchThreats();
-  }, []);
+  }, [page]);
 
   const handleSearch = () => {
+    setPage(1); // reset to first page on new search
     fetchThreats();
   };
 
@@ -34,13 +38,7 @@ const Dashboard = () => {
 
       {/* Search & Filters */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <input
-          type="text"
-          placeholder="Search by IP, domain, hash..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="border p-2 rounded"
-        />
+        <input type="text" placeholder="Search by IP, domain, hash..." value={query} onChange={(e) => setQuery(e.target.value)} className="border p-2 rounded" />
         <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="border p-2 rounded">
           <option value="">All Severities</option>
           <option value="Low">Low</option>
@@ -57,9 +55,7 @@ const Dashboard = () => {
         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="border p-2 rounded" />
       </div>
 
-      <button onClick={handleSearch} className="bg-blue-500 text-white px-4 py-2 rounded">
-        Search
-      </button>
+      <button onClick={handleSearch} className="bg-blue-500 text-white px-4 py-2 rounded">Search</button>
 
       {/* Threats Table */}
       <table className="w-full mt-6 border-collapse border border-gray-300">
@@ -83,13 +79,30 @@ const Dashboard = () => {
             ))
           ) : (
             <tr>
-              <td colSpan="4" className="text-center p-4">
-                No threats found.
-              </td>
+              <td colSpan="4" className="text-center p-4">No threats found.</td>
             </tr>
           )}
         </tbody>
       </table>
+
+      {/* Pagination */}
+      <div className="flex justify-between items-center mt-4">
+        <button
+          disabled={page <= 1}
+          onClick={() => setPage(page - 1)}
+          className={`px-4 py-2 rounded ${page <= 1 ? "bg-gray-300" : "bg-blue-500 text-white"}`}
+        >
+          Prev
+        </button>
+        <span>Page {page} of {totalPages}</span>
+        <button
+          disabled={page >= totalPages}
+          onClick={() => setPage(page + 1)}
+          className={`px-4 py-2 rounded ${page >= totalPages ? "bg-gray-300" : "bg-blue-500 text-white"}`}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 };
