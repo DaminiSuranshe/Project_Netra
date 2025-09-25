@@ -155,4 +155,50 @@ router.get("/fetch", async (req, res) => {
   }
 });
 
+// 🔹 Search and filter threats with pagination
+router.get("/search", async (req, res) => {
+  try {
+    const { query, severity, source, startDate, endDate, page = 1, limit = 10 } = req.query;
+
+    let filter = {};
+
+    // Search by IOC (IP, domain, hash, name)
+    if (query) {
+      filter.$or = [
+        { ip: { $regex: query, $options: "i" } },
+        { domain: { $regex: query, $options: "i" } },
+        { hash: { $regex: query, $options: "i" } },
+        { name: { $regex: query, $options: "i" } }
+      ];
+    }
+
+    if (severity) filter.severity = severity;
+    if (source) filter.source = source;
+
+    if (startDate || endDate) {
+      filter.createdAt = {};
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    const skip = (page - 1) * limit;
+
+    const threats = await Threat.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await Threat.countDocuments(filter);
+
+    res.json({
+      threats,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
