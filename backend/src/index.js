@@ -1,3 +1,5 @@
+// src/index.js
+
 // ----------------------
 // IMPORTS
 // ----------------------
@@ -16,7 +18,7 @@ const authRoutes = require("./routes/auth");
 const protectedRoute = require("./routes/protected");
 
 // Alerts
-const { sendCriticalAlert, scheduleDailyReports } = require("./utils/alertUtils");
+const { scheduleDailyReports, sendCriticalAlert } = require("./utils/alertUtils");
 
 // ----------------------
 // CONFIGURATION
@@ -34,8 +36,8 @@ app.use(express.json());
 // ROUTES
 // ----------------------
 app.use("/api/ioc", iocRoutes);
-app.use("/api/threats", threatRoutes);
-app.use("/api/correlate", correlateRoutes);
+app.use("/api/threats", threatRoutes);       // Phase 3 + 4 threat fetch & storage
+app.use("/api/correlate", correlateRoutes); // Phase 6 enrichment
 app.use("/api/health", healthRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/protected", protectedRoute);
@@ -46,11 +48,23 @@ app.use("/api/protected", protectedRoute);
 connectDB();
 
 // ----------------------
-// TEMP TEST ROUTE
+// SCHEDULE DAILY REPORTS (8 AM every day)
+// ----------------------
+scheduleDailyReports();
+
+// ----------------------
+// TEMP TEST ROUTE (Insert & Retrieve Threats)
 // ----------------------
 app.get("/api/testdb", async (req, res) => {
   try {
-    const threat = await Threat.create({ name: "Malware XYZ", severity: "High" });
+    const threat = await Threat.create({
+      name: "Malware XYZ",
+      severity: "high",
+      indicator: "192.168.1.100",
+      message: "Test alert",
+      details: "This is a test threat for alert system"
+    });
+
     const threats = await Threat.find();
     res.json({ inserted: threat, allThreats: threats });
   } catch (error) {
@@ -59,21 +73,22 @@ app.get("/api/testdb", async (req, res) => {
 });
 
 // ----------------------
-// START ALERTS
+// EXAMPLE MANUAL ALERT (OPTIONAL)
 // ----------------------
-// Start daily reports at 8 AM every day
-scheduleDailyReports();
+async function testManualAlert() {
+  const threat = {
+    severity: "high",
+    indicator: "10.0.0.5",
+    source: "Manual Test",
+    message: "Manual SQL Injection Attempt",
+    details: "Detected suspicious payload in login parameter"
+  };
 
-// Example: immediate test alert
-const testThreat = {
-  severity: "high",
-  indicator: "192.168.1.10",
-  source: "Test System",
-  message: "SQL Injection attempt",
-  details: "Detected in login endpoint",
-};
+  await sendCriticalAlert(threat);
+}
 
-sendCriticalAlert(testThreat);
+// Uncomment to test manual alert once
+// testManualAlert();
 
 // ----------------------
 // START SERVER

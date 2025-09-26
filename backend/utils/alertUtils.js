@@ -1,4 +1,4 @@
-// utils/alertUtils.js
+// src/utils/alertUtils.js
 
 const { IncomingWebhook } = require("@slack/webhook");
 const nodemailer = require("nodemailer");
@@ -7,34 +7,26 @@ const fs = require("fs");
 const path = require("path");
 
 // ----------------------
-// SLACK WEBHOOK
+// SLACK WEBHOOK SETUP
 // ----------------------
 const slackWebhook = new IncomingWebhook(process.env.SLACK_WEBHOOK_URL);
 
 // ----------------------
-// EMAIL TRANSPORTER
+// EMAIL TRANSPORTER SETUP
 // ----------------------
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.ALERT_EMAIL_USER,
-    pass: process.env.ALERT_EMAIL_PASS, // Gmail App Password
-  },
-});
-
-// Verify transporter
-transporter.verify((err, success) => {
-  if (err) console.error("❌ Email transporter verification failed:", err);
-  else console.log("✅ Email transporter ready");
+    pass: process.env.ALERT_EMAIL_PASS // Gmail App Password
+  }
 });
 
 // ----------------------
-// SEND CRITICAL ALERT
+// HELPER: FORMAT ALERT MESSAGE
 // ----------------------
-async function sendCriticalAlert(threat) {
-  if (!threat || !["high", "critical"].includes(threat.severity.toLowerCase())) return;
-
-  const alertText = `
+function formatAlertMessage(threat) {
+  return `
 🚨 CRITICAL THREAT DETECTED 🚨
 Severity: ${threat.severity}
 Indicator: ${threat.indicator || "N/A"}
@@ -43,27 +35,37 @@ Message: ${threat.message || "N/A"}
 Details: ${threat.details || "N/A"}
 Time: ${new Date().toLocaleString()}
 `;
+}
 
-  // ---- Slack ----
+// ----------------------
+// SEND CRITICAL ALERT (SLACK + EMAIL)
+// ----------------------
+async function sendCriticalAlert(threat) {
+  if (!threat || !["high", "critical"].includes(threat.severity.toLowerCase())) return;
+
+  const alertText = formatAlertMessage(threat);
+
+  // --- Slack ---
   try {
     await slackWebhook.send({ text: alertText });
     console.log("✅ Slack alert sent");
   } catch (err) {
-    console.error("❌ Slack alert failed:", err);
+    console.error("❌ Slack alert failed:", err.message);
   }
 
-  // ---- Email ----
+  // --- Email ---
   try {
     const mailOptions = {
       from: `"Threat Alert System" <${process.env.ALERT_EMAIL_USER}>`,
       to: process.env.ALERT_EMAIL_TO || process.env.ALERT_EMAIL_USER,
       subject: `🚨 Critical Threat Detected: ${threat.indicator || "Unknown"}`,
-      text: alertText,
+      text: alertText
     };
+
     const info = await transporter.sendMail(mailOptions);
     console.log("✅ Email alert sent:", info.response);
   } catch (err) {
-    console.error("❌ Email alert failed:", err);
+    console.error("❌ Email alert failed:", err.message);
   }
 }
 
@@ -75,7 +77,7 @@ async function sendDailyReport() {
     const reportPath = path.join(__dirname, "../exports/daily_report.csv");
 
     if (!fs.existsSync(reportPath)) {
-      console.warn("⚠️ Daily report file not found:", reportPath);
+      console.warn("⚠️ Daily report not found:", reportPath);
       return;
     }
 
@@ -87,20 +89,20 @@ async function sendDailyReport() {
       attachments: [
         {
           filename: "daily_report.csv",
-          path: reportPath,
-        },
-      ],
+          path: reportPath
+        }
+      ]
     };
 
     const info = await transporter.sendMail(mailOptions);
     console.log("✅ Daily report emailed:", info.response);
   } catch (err) {
-    console.error("❌ Failed to send daily report:", err);
+    console.error("❌ Failed to send daily report:", err.message);
   }
 }
 
 // ----------------------
-// SCHEDULE DAILY REPORTS (8 AM every day)
+// SCHEDULE DAILY REPORTS (8 AM EVERY DAY)
 // ----------------------
 function scheduleDailyReports() {
   cron.schedule("0 8 * * *", () => {
@@ -115,5 +117,5 @@ function scheduleDailyReports() {
 module.exports = {
   sendCriticalAlert,
   sendDailyReport,
-  scheduleDailyReports,
+  scheduleDailyReports
 };
