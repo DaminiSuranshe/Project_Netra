@@ -13,7 +13,7 @@ if (EMAIL_USER && EMAIL_PASS) {
   });
 } else {
   console.warn(
-    "⚠️ ALERT_EMAIL_USER or ALERT_EMAIL_PASS not defined. Email alerts will be skipped."
+    "⚠️ ALERT_EMAIL_USER or ALERT_EMAIL_PASS not defined. Email alerts will fallback to console logs."
   );
 }
 
@@ -23,7 +23,6 @@ if (EMAIL_USER && EMAIL_PASS) {
  */
 async function sendEmailAlert(threat) {
   if (!threat) return;
-  if (!transporter) return;
 
   const subject = `🚨 Critical Threat Detected: ${threat.indicator || "Unknown"}`;
   const text = `
@@ -36,13 +35,16 @@ Details: ${threat.details || "N/A"}
 Time: ${new Date().toLocaleString()}
 `;
 
-  const mailOptions = { from: `"Threat Alert System" <${EMAIL_USER}>`, to: EMAIL_TO, subject, text };
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Email alert sent:", info.response);
-  } catch (err) {
-    console.error("❌ Failed to send email alert:", err.message);
+  if (transporter) {
+    const mailOptions = { from: `"Threat Alert System" <${EMAIL_USER}>`, to: EMAIL_TO, subject, text };
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log("✅ Email alert sent:", info.response);
+    } catch (err) {
+      console.error("❌ Failed to send email alert:", err.message);
+    }
+  } else {
+    console.log("[Email TEST ALERT]", text);
   }
 }
 

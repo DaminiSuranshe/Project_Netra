@@ -3,30 +3,30 @@ const nodemailer = require("nodemailer");
 const cron = require("node-cron");
 const fs = require("fs");
 const path = require("path");
+const { IncomingWebhook } = require("@slack/webhook");
 
 // ----------------------
 // SLACK WEBHOOK SETUP
 // ----------------------
-let slackWebhook = null;
 const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL?.trim();
+let slackWebhook = null;
 
 if (slackWebhookUrl) {
-  const { IncomingWebhook } = require("@slack/webhook");
   slackWebhook = new IncomingWebhook(slackWebhookUrl);
 } else {
   console.warn(
-    "⚠️ SLACK_WEBHOOK_URL not defined or empty. Slack alerts will be skipped."
+    "⚠️ SLACK_WEBHOOK_URL not defined or empty. Slack alerts will fallback to console logs."
   );
 }
 
 // ----------------------
 // EMAIL TRANSPORTER SETUP
 // ----------------------
-let transporter = null;
 const EMAIL_USER = process.env.ALERT_EMAIL_USER?.trim();
 const EMAIL_PASS = process.env.ALERT_EMAIL_PASS?.trim();
 const EMAIL_TO = process.env.ALERT_EMAIL_TO?.trim() || EMAIL_USER;
 
+let transporter = null;
 if (EMAIL_USER && EMAIL_PASS) {
   transporter = nodemailer.createTransport({
     service: "gmail",
@@ -34,7 +34,7 @@ if (EMAIL_USER && EMAIL_PASS) {
   });
 } else {
   console.warn(
-    "⚠️ ALERT_EMAIL_USER or ALERT_EMAIL_PASS not defined or empty. Email alerts will be skipped."
+    "⚠️ ALERT_EMAIL_USER or ALERT_EMAIL_PASS not defined or empty. Email alerts will fallback to console logs."
   );
 }
 
@@ -42,7 +42,8 @@ if (EMAIL_USER && EMAIL_PASS) {
 // SEND CRITICAL ALERT
 // ----------------------
 async function sendCriticalAlert(threat) {
-  if (!threat || !["high", "critical"].includes(threat.severity?.toLowerCase())) return;
+  if (!threat || !["high", "critical"].includes(threat.severity?.toLowerCase()))
+    return;
 
   const alertText = `
 🚨 CRITICAL THREAT DETECTED 🚨
@@ -62,6 +63,8 @@ Time: ${new Date().toLocaleString()}
     } catch (err) {
       console.error("❌ Slack alert failed:", err.message);
     }
+  } else {
+    console.log("[Slack TEST ALERT]", alertText);
   }
 
   // ---- Email ----
@@ -78,6 +81,8 @@ Time: ${new Date().toLocaleString()}
     } catch (err) {
       console.error("❌ Email alert failed:", err.message);
     }
+  } else {
+    console.log("[Email TEST ALERT]", alertText);
   }
 }
 
@@ -92,21 +97,24 @@ async function sendDailyReport() {
     return;
   }
 
-  if (!transporter) return;
+  const reportText = "📊 Daily Threat Report attached: " + reportPath;
 
-  try {
-    const mailOptions = {
-      from: `"Threat Report System" <${EMAIL_USER}>`,
-      to: EMAIL_TO,
-      subject: "📊 Daily Threat Report",
-      text: "Please find attached the daily threat report.",
-      attachments: [{ filename: "daily_report.csv", path: reportPath }],
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Daily report emailed:", info.response);
-  } catch (err) {
-    console.error("❌ Failed to send daily report:", err.message);
+  if (transporter) {
+    try {
+      const mailOptions = {
+        from: `"Threat Report System" <${EMAIL_USER}>`,
+        to: EMAIL_TO,
+        subject: "📊 Daily Threat Report",
+        text: "Please find attached the daily threat report.",
+        attachments: [{ filename: "daily_report.csv", path: reportPath }],
+      };
+      const info = await transporter.sendMail(mailOptions);
+      console.log("✅ Daily report sent:", info.response);
+    } catch (err) {
+      console.error("❌ Daily report email failed:", err.message);
+    }
+  } else {
+    console.log("[Daily Report TEST]", reportText);
   }
 }
 

@@ -5,7 +5,7 @@ const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL?.trim();
 
 if (!SLACK_WEBHOOK_URL) {
   console.warn(
-    "⚠️ SLACK_WEBHOOK_URL not defined or empty. Slack alerts will be skipped."
+    "⚠️ SLACK_WEBHOOK_URL not defined or empty. Slack alerts will fallback to console logs."
   );
 }
 
@@ -15,7 +15,6 @@ if (!SLACK_WEBHOOK_URL) {
  */
 async function sendSlackAlert(threat) {
   if (!threat) return;
-  if (!SLACK_WEBHOOK_URL) return;
 
   const alertText = `
 🚨 *CRITICAL THREAT DETECTED!* 🚨
@@ -28,11 +27,15 @@ async function sendSlackAlert(threat) {
 *Time:* ${new Date().toLocaleString()}
 `;
 
-  try {
-    await axios.post(SLACK_WEBHOOK_URL, { text: alertText });
-    console.log("✅ Slack alert sent!");
-  } catch (err) {
-    console.error("❌ Slack alert failed:", err.message);
+  if (SLACK_WEBHOOK_URL) {
+    try {
+      await axios.post(SLACK_WEBHOOK_URL, { text: alertText });
+      console.log("✅ Slack alert sent!");
+    } catch (err) {
+      console.error("❌ Slack alert failed:", err.message);
+    }
+  } else {
+    console.log("[Slack TEST ALERT]", alertText);
   }
 }
 
