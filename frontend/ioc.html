@@ -2,32 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>IoC Lookup - Project Netra</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script defer src="js/ioc-frontend.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IoC Lookup</title>
+  <link rel="stylesheet" href="ioc.css">
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
-
-  <div class="container mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-6">IoC Lookup</h1>
-
-    <!-- Input Section -->
-    <div class="flex flex-col md:flex-row gap-4 mb-6">
-      <select id="iocType" class="p-2 rounded bg-gray-800">
+<body>
+  <div class="container">
+    <h1>IoC Lookup</h1>
+    
+    <form id="iocForm">
+      <label for="iocType">Type:</label>
+      <select id="iocType" required>
         <option value="ip">IP</option>
         <option value="domain">Domain</option>
         <option value="hash">Hash</option>
       </select>
-      <input type="text" id="iocValue" placeholder="Enter IP, Domain, or Hash" class="p-2 rounded bg-gray-800 flex-1">
-      <button id="lookupBtn" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500 transition">Lookup</button>
+
+      <label for="iocValue">Value:</label>
+      <input type="text" id="iocValue" placeholder="Enter IP/Domain/Hash" required>
+
+      <button type="submit">Lookup</button>
+    </form>
+
+    <div id="results">
+      <h2>Results:</h2>
+      <ul id="resultsList"></ul>
     </div>
-
-    <p id="lookupMsg" class="mb-4"></p>
-
-    <!-- Results Container -->
-    <div id="iocResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
   </div>
 
+  <script src="ioc.js"></script>
 </body>
 </html>

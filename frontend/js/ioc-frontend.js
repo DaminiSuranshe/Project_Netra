@@ -80,3 +80,51 @@ lookupBtn.addEventListener("click", async () => {
     lookupMsg.textContent = `❌ ${err.message}`;
   }
 });
+
+// ----------------------
+// DOM Elements
+// ----------------------
+const iocForm = document.getElementById("iocForm");
+const resultsList = document.getElementById("resultsList");
+
+// ----------------------
+// Event Listener
+// ----------------------
+iocForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  resultsList.innerHTML = ""; // Clear previous results
+
+  const type = iocType.value;
+  const value = iocValue.value.trim();
+  if (!value) return alert("Please enter a value");
+
+  try {
+    const res = await fetch("/api/ioc/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, value }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || "Lookup failed");
+
+    // Display results
+    data.results.forEach((r) => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <strong>Source:</strong> ${r.source} |
+        <strong>Indicator:</strong> ${r.indicator} |
+        ${r.reputation ? `<strong>Reputation:</strong> ${r.reputation} |` : ""}
+        ${r.pulseCount !== undefined ? `<strong>Pulse Count:</strong> ${r.pulseCount} |` : ""}
+        ${r.lastAnalysisStats ? `<strong>VT Stats:</strong> ${JSON.stringify(r.lastAnalysisStats)}` : ""}
+      `;
+      resultsList.appendChild(li);
+    });
+
+  } catch (err) {
+    console.error(err);
+    alert(`Error: ${err.message}`);
+  }
+
+});
