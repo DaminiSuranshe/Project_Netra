@@ -7,27 +7,34 @@ router.post("/", async (req, res) => {
   try {
     const { ioc } = req.body;
 
-    if (!ioc) return res.status(400).json({ error: "IoC is required" });
+    if (!ioc) {
+      return res.status(400).json({ error: "IoC is required" });
+    }
 
-    // Example enrichment logic
+    // Dummy correlation/enrichment logic
     const enrichedThreat = {
-      ioc,
+      indicator: ioc,
       type: "ip",
-      severity: "high", // replace with real API logic
+      severity: "high",
       source: "AbuseIPDB",
-      details: "Suspicious IP with multiple abuse reports"
+      description: "Suspicious IP detected via correlation",
+      message: `Critical correlated threat: ${ioc}`,
+      details: `IoC: ${ioc}, Source: AbuseIPDB, Severity: High, Correlated via multiple sources`,
+      geo: { country: "US", region: "California", city: "San Francisco" },
+      confidenceScore: 90,
+      correlatedSources: ["AbuseIPDB", "VirusTotal"]
     };
 
     const threat = await Threat.create(enrichedThreat);
 
-    // Send alert if severity is high
-    if (threat.severity.toLowerCase() === "high") {
+    // Trigger alerts automatically
+    if (threat.severity === "high" || threat.severity === "critical") {
       await sendCriticalAlert(threat);
     }
 
     res.json({ success: true, threat });
   } catch (error) {
-    console.error("Correlation error:", error.message);
+    console.error("Correlation Error:", error);
     res.status(500).json({ error: "Failed to correlate IoC" });
   }
 });
