@@ -7,13 +7,16 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const Threat = require("./models/Threat");
 
-// Routes (import each only once)
+// Routes
 const threatRoutes = require("./routes/threats");
 const iocRoutes = require("./routes/ioc");
 const correlateRoutes = require("./routes/correlate");
 const healthRoute = require("./routes/health");
 const authRoutes = require("./routes/auth");
 const protectedRoute = require("./routes/protected");
+
+// Alerts
+const { sendCriticalAlert, scheduleDailyReports } = require("./utils/alertUtils");
 
 // ----------------------
 // CONFIGURATION
@@ -31,17 +34,11 @@ app.use(express.json());
 // ROUTES
 // ----------------------
 app.use("/api/ioc", iocRoutes);
-app.use("/api/threats", threatRoutes);       // Phase 3 + 4 threat fetch & storage
-app.use("/api/correlate", correlateRoutes); // Phase 6 enrichment
+app.use("/api/threats", threatRoutes);
+app.use("/api/correlate", correlateRoutes);
 app.use("/api/health", healthRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/protected", protectedRoute);
-
-
-const { scheduleDailyReports } = require("./utils/alertUtils");
-
-// Start scheduled daily reports (8 AM every day)
-scheduleDailyReports();
 
 // ----------------------
 // DATABASE CONNECTION
@@ -49,7 +46,7 @@ scheduleDailyReports();
 connectDB();
 
 // ----------------------
-// TEMP TEST ROUTE (Insert & Retrieve Threats)
+// TEMP TEST ROUTE
 // ----------------------
 app.get("/api/testdb", async (req, res) => {
   try {
@@ -62,25 +59,22 @@ app.get("/api/testdb", async (req, res) => {
 });
 
 // ----------------------
+// START ALERTS
+// ----------------------
+scheduleDailyReports(); // Start daily report scheduler
+
+// Example threat alert (optional test)
+const testThreat = {
+  severity: 'high',
+  message: 'SQL Injection attempt detected',
+  details: 'UserID param exploited'
+};
+sendCriticalAlert(testThreat);
+
+// ----------------------
 // START SERVER
 // ----------------------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Backend running on http://localhost:${PORT}`);
 });
-
-
-const { sendCriticalAlert, scheduleDailyReports } = require('./utils/alertUtils');
-
-// Start scheduled daily reports
-scheduleDailyReports();
-
-// Example threat detection
-const threat = {
-  severity: 'high',
-  message: 'SQL Injection attempt detected',
-  details: 'UserID param exploited'
-};
-sendCriticalAlert(threat);
-
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

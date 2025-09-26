@@ -2,31 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IoC Lookup</title>
-  <link rel="stylesheet" href="css/ioc.css">
+  <link rel="stylesheet" href="ioc.css">
 </head>
 <body>
-  <div class="container">
-    <h1>IoC Lookup</h1>
 
+  <div class="container" style="max-width: 900px; margin: 2rem auto; padding: 1rem;">
+    <h1 style="font-size:2rem; font-weight:bold; margin-bottom:1rem;">IoC Lookup</h1>
+
+    <!-- Lookup Form -->
     <form id="iocForm">
-      <label for="iocType">Type:</label>
-      <select id="iocType" required>
+      <select id="iocType">
+        <option value="">Select IoC Type</option>
         <option value="ip">IP Address</option>
         <option value="domain">Domain</option>
-        <option value="hash">Hash</option>
+        <option value="hash">File Hash</option>
       </select>
-
-      <label for="iocValue">Value:</label>
-      <input type="text" id="iocValue" placeholder="Enter IP, Domain, or Hash" required>
-
-      <button type="submit">Lookup</button>
+      <input type="text" id="iocValue" placeholder="Enter IP, Domain, or Hash">
+      <button type="button" id="lookupBtn">Lookup</button>
     </form>
 
-    <h2>Results</h2>
+    <!-- Lookup Message -->
+    <div id="lookupMsg"></div>
+
+    <!-- Card Results -->
+    <div id="iocResults"></div>
+
+    <!-- List Results (Fallback) -->
     <ul id="resultsList"></ul>
   </div>
 
+  <!-- JavaScript -->
   <script src="ioc.js"></script>
 </body>
 </html>
