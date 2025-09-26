@@ -8,6 +8,9 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const Threat = require("./models/Threat");
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+require('dotenv').config();
 
 // Routes
 const threatRoutes = require("./routes/threats");
@@ -17,6 +20,12 @@ const healthRoute = require("./routes/health");
 const authRoutes = require("./routes/auth");
 const protectedRoute = require("./routes/protected");
 const dashboardRoutes = require("./routes/dashboard");
+const authRoutes = require('./routes/auth');
+const dashboardRoutes = require('./routes/dashboard');
+const { authMiddleware } = require('./middleware/authMiddleware');
+
+const app = express();
+app.use(bodyParser.json());
 
 // Alerts
 const { scheduleDailyReports, sendCriticalAlert } = require("./utils/alertUtils");
@@ -25,7 +34,6 @@ const { scheduleDailyReports, sendCriticalAlert } = require("./utils/alertUtils"
 // CONFIGURATION
 // ----------------------
 dotenv.config();
-const app = express();
 
 // ----------------------
 // MIDDLEWARE
@@ -44,6 +52,8 @@ app.use("/api/health", healthRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/protected", protectedRoute);
 app.use("/api/dashboard", dashboardRoutes);
+app.use('/auth', authRoutes);
+app.use('/dashboard', authMiddleware, dashboardRoutes);
 
 // ----------------------
 // DATABASE CONNECTION
@@ -100,3 +110,10 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Backend running on http://localhost:${PORT}`);
 });
+
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.error(err));
+
+app.listen(3000, () => console.log("🚀 Server running on http://localhost:3000"));
+
