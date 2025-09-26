@@ -2,32 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IoC Lookup</title>
-  <link rel="stylesheet" href="ioc.css">
+  <link rel="stylesheet" href="css/ioc.css">
 </head>
 <body>
   <div class="container">
     <h1>IoC Lookup</h1>
-    
+
     <form id="iocForm">
       <label for="iocType">Type:</label>
       <select id="iocType" required>
-        <option value="ip">IP</option>
+        <option value="ip">IP Address</option>
         <option value="domain">Domain</option>
         <option value="hash">Hash</option>
       </select>
 
       <label for="iocValue">Value:</label>
-      <input type="text" id="iocValue" placeholder="Enter IP/Domain/Hash" required>
+      <input type="text" id="iocValue" placeholder="Enter IP, Domain, or Hash" required>
 
       <button type="submit">Lookup</button>
     </form>
 
-    <div id="results">
-      <h2>Results:</h2>
-      <ul id="resultsList"></ul>
-    </div>
+    <h2>Results</h2>
+    <ul id="resultsList"></ul>
   </div>
 
   <script src="ioc.js"></script>

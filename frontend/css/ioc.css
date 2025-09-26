@@ -1,90 +1,141 @@
-/* ---------- General Styles ---------- */
+/* ---------------------- */
+/* General Page Styles */
+/* ---------------------- */
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #1f2937;
-  color: #f3f4f6;
+  font-family: Arial, sans-serif;
+  background-color: #1f2937; /* dark gray background */
+  color: #f9fafb; /* light text */
   margin: 0;
-  padding: 0;
+  padding: 20px;
 }
 
-/* ---------- Container ---------- */
-.container {
-  max-width: 600px;
-  margin: 40px auto;
-  background-color: #111827;
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-}
-
-/* ---------- Headings ---------- */
-h1 {
-  text-align: center;
-  margin-bottom: 20px;
-  color: #60a5fa;
-}
-
-h2 {
-  margin-top: 30px;
-  margin-bottom: 10px;
-  color: #fbbf24;
-}
-
-/* ---------- Form ---------- */
-form {
+/* ---------------------- */
+/* Form Styles */
+/* ---------------------- */
+#iocForm {
   display: flex;
-  flex-direction: column;
-  gap: 15px;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
-label {
-  font-weight: bold;
-}
-
-input, select {
-  padding: 10px;
+#iocType, #iocValue {
+  padding: 8px 12px;
   border-radius: 6px;
   border: none;
   outline: none;
-  font-size: 16px;
+  font-size: 14px;
 }
 
-input:focus, select:focus {
-  box-shadow: 0 0 0 2px #3b82f6;
-}
-
-button {
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
+#lookupBtn {
+  padding: 8px 16px;
   background-color: #3b82f6;
   color: white;
-  font-weight: bold;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  font-weight: bold;
+  transition: background-color 0.2s;
 }
 
-button:hover {
+#lookupBtn:hover {
   background-color: #2563eb;
-  transform: scale(1.05);
 }
 
-/* ---------- Results List ---------- */
+#lookupMsg {
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+/* ---------------------- */
+/* Cards Styles */
+/* ---------------------- */
+#iocResults {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+#iocResults .shadow-md {
+  background-color: #374151; /* slightly lighter gray for card */
+  padding: 12px;
+  border-radius: 10px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  max-height: 400px; /* limit card height */
+  overflow: hidden;
+}
+
+#iocResults .shadow-md:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------------------- */
+/* Severity Badges */
+/* ---------------------- */
+.bg-red-600 { background-color: #dc2626; }
+.bg-yellow-500 { background-color: #eab308; color: #000; }
+.bg-green-600 { background-color: #16a34a; }
+.bg-gray-700 { background-color: #374151; }
+
+span {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ---------------------- */
+/* Scrollable fields inside cards */
+/* ---------------------- */
+.card-scroll {
+  max-height: 120px;
+  overflow-y: auto;
+  background-color: #1f2937;
+  padding: 4px 6px;
+  border-radius: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  white-space: pre-wrap; /* preserve line breaks */
+}
+
+/* ---------------------- */
+/* Alert Banner */
+/* ---------------------- */
+#iocAlertBanner {
+  background-color: #b91c1c;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-weight: bold;
+  animation: pulse 1s infinite;
+}
+
+/* ---------------------- */
+/* Pulse Animation */
+/* ---------------------- */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+/* ---------------------- */
+/* Fallback List */
+/* ---------------------- */
 #resultsList {
   list-style: none;
-  padding: 0;
-  margin: 0;
+  padding-left: 0;
 }
 
 #resultsList li {
-  background-color: #1f2937;
-  padding: 12px 15px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  transition: transform 0.2s;
-}
-
-#resultsList li:hover {
-  transform: scale(1.02);
+  background-color: #4b5563;
+  margin-bottom: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  word-break: break-word;
+  font-size: 14px;
 }

@@ -1,21 +1,34 @@
+// ----------------------
+// DOM Elements
+// ----------------------
+const iocForm = document.getElementById("iocForm");
 const lookupBtn = document.getElementById("lookupBtn");
 const iocType = document.getElementById("iocType");
 const iocValue = document.getElementById("iocValue");
 const lookupMsg = document.getElementById("lookupMsg");
 const iocResults = document.getElementById("iocResults");
+const resultsList = document.getElementById("resultsList");
 
+// ----------------------
 // Helper: Severity Badge
+// ----------------------
 function getSeverityBadge(severity) {
   switch (severity?.toLowerCase()) {
-    case "high": return '<span class="bg-red-600 text-white px-2 py-1 rounded-full text-xs font-semibold">🔥 High</span>';
-    case "medium": return '<span class="bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-semibold">⚠️ Medium</span>';
-    case "low": return '<span class="bg-green-600 text-white px-2 py-1 rounded-full text-xs font-semibold">✅ Low</span>';
-    default: return '<span class="bg-gray-700 text-white px-2 py-1 rounded-full text-xs font-semibold">❓ Unknown</span>';
+    case "high":
+      return '<span class="bg-red-600 text-white px-2 py-1 rounded-full text-xs font-semibold">🔥 High</span>';
+    case "medium":
+      return '<span class="bg-yellow-500 text-black px-2 py-1 rounded-full text-xs font-semibold">⚠️ Medium</span>';
+    case "low":
+      return '<span class="bg-green-600 text-white px-2 py-1 rounded-full text-xs font-semibold">✅ Low</span>';
+    default:
+      return '<span class="bg-gray-700 text-white px-2 py-1 rounded-full text-xs font-semibold">❓ Unknown</span>';
   }
 }
 
-// Render Results
-function renderResults(results) {
+// ----------------------
+// Render Card Results
+// ----------------------
+function renderCardResults(results) {
   iocResults.innerHTML = results.map((r, index) => `
     <div class="bg-gray-800 p-4 rounded-lg shadow-md hover:scale-105 transform transition duration-200 cursor-pointer" 
          data-index="${index}" title="Click for details">
@@ -31,7 +44,7 @@ function renderResults(results) {
     </div>
   `).join("");
 
-  // Optional: alert banner for high-severity IoCs
+  // High-severity alert banner
   const highCount = results.filter(r => r.severity?.toLowerCase() === "high").length;
   if (highCount > 0) {
     if (!document.getElementById("iocAlertBanner")) {
@@ -40,24 +53,42 @@ function renderResults(results) {
       banner.className = "bg-red-600 text-white px-4 py-2 rounded mb-4 animate-pulse";
       banner.textContent = `⚠️ ALERT: ${highCount} high-severity IoC(s) detected!`;
       iocResults.parentNode.insertBefore(banner, iocResults);
-      setTimeout(() => banner.remove(), 7000); // auto-hide
+      setTimeout(() => banner.remove(), 7000);
     }
   }
 }
 
+// ----------------------
+// Render List Results (Fallback)
+// ----------------------
+function renderListResults(results) {
+  if (!resultsList) return;
+  resultsList.innerHTML = "";
+  results.forEach(r => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <strong>Source:</strong> ${r.source} |
+      <strong>Indicator:</strong> ${r.indicator} |
+      ${r.reputation ? `<strong>Reputation:</strong> ${r.reputation} |` : ""}
+      ${r.pulseCount !== undefined ? `<strong>Pulse Count:</strong> ${r.pulseCount} |` : ""}
+      ${r.lastAnalysisStats ? `<strong>VT Stats:</strong> ${JSON.stringify(r.lastAnalysisStats)}` : ""}
+    `;
+    resultsList.appendChild(li);
+  });
+}
 
-// Lookup Button
-lookupBtn.addEventListener("click", async () => {
-  const type = iocType.value;
-  const value = iocValue.value.trim();
-
+// ----------------------
+// Fetch IoC Results
+// ----------------------
+async function lookupIoC(type, value) {
   if (!type || !value) {
     lookupMsg.textContent = "⚠️ Please enter a value";
-    return;
+    return [];
   }
 
   lookupMsg.textContent = "⏳ Looking up...";
   iocResults.innerHTML = "";
+  if (resultsList) resultsList.innerHTML = "";
 
   try {
     const res = await fetch("/api/ioc/lookup", {
@@ -71,60 +102,38 @@ lookupBtn.addEventListener("click", async () => {
 
     if (!data.results || data.results.length === 0) {
       lookupMsg.textContent = "ℹ️ No results found";
+      return [];
     } else {
       lookupMsg.textContent = `✅ ${data.results.length} result(s) found`;
-      renderResults(data.results);
+      return data.results;
     }
 
   } catch (err) {
     lookupMsg.textContent = `❌ ${err.message}`;
+    return [];
   }
-});
+}
 
 // ----------------------
-// DOM Elements
+// Event Listeners
 // ----------------------
-const iocForm = document.getElementById("iocForm");
-const resultsList = document.getElementById("resultsList");
+if (lookupBtn) {
+  lookupBtn.addEventListener("click", async () => {
+    const results = await lookupIoC(iocType.value, iocValue.value.trim());
+    if (results.length > 0) {
+      renderCardResults(results);
+      renderListResults(results);
+    }
+  });
+}
 
-// ----------------------
-// Event Listener
-// ----------------------
-iocForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  resultsList.innerHTML = ""; // Clear previous results
-
-  const type = iocType.value;
-  const value = iocValue.value.trim();
-  if (!value) return alert("Please enter a value");
-
-  try {
-    const res = await fetch("/api/ioc/lookup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, value }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.error || "Lookup failed");
-
-    // Display results
-    data.results.forEach((r) => {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <strong>Source:</strong> ${r.source} |
-        <strong>Indicator:</strong> ${r.indicator} |
-        ${r.reputation ? `<strong>Reputation:</strong> ${r.reputation} |` : ""}
-        ${r.pulseCount !== undefined ? `<strong>Pulse Count:</strong> ${r.pulseCount} |` : ""}
-        ${r.lastAnalysisStats ? `<strong>VT Stats:</strong> ${JSON.stringify(r.lastAnalysisStats)}` : ""}
-      `;
-      resultsList.appendChild(li);
-    });
-
-  } catch (err) {
-    console.error(err);
-    alert(`Error: ${err.message}`);
-  }
-
-});
+if (iocForm) {
+  iocForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const results = await lookupIoC(iocType.value, iocValue.value.trim());
+    if (results.length > 0) {
+      renderCardResults(results);
+      renderListResults(results);
+    }
+  });
+}
