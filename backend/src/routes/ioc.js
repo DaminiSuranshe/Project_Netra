@@ -1,6 +1,11 @@
+// ----------------------
+// IMPORTS
+// ----------------------
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
+const Threat = require("../models/Threat");
+const { sendCriticalAlert } = require("../utils/alertUtils");
 
 // Load API keys
 const { ABUSEIPDB_KEY, OTX_KEY, VT_KEY } = process.env;
@@ -76,7 +81,35 @@ router.post("/lookup", async (req, res) => {
       console.error("VirusTotal error:", err.message);
     }
 
-    res.json({ results });
+    // -----------------------------
+    // Save threats & trigger alerts
+    // -----------------------------
+    for (const r of results) {
+      // Determine severity
+      let severity = "low";
+      if ((r.confidence && r.confidence >= 70) || (r.pulseCount && r.pulseCount > 5)) {
+        severity = "high";
+      }
+
+      const threatData = {
+        indicator: r.indicator,
+        type: r.type,
+        source: r.source,
+        description: r.reputation || r.pulseCount || JSON.stringify(r.lastAnalysisStats),
+        severity,
+        message: `Critical threat detected for IoC: ${r.indicator}`,
+        details: JSON.stringify(r),
+      };
+
+      const threat = await Threat.create(threatData);
+
+      // Trigger Slack + Email alerts for high severity
+      if (severity === "high") {
+        await sendCriticalAlert(threat);
+      }
+    }
+
+    res.json({ results, message: "IoCs processed and alerts sent for high-severity threats" });
 
   } catch (error) {
     console.error("IoC Lookup error:", error.message);
