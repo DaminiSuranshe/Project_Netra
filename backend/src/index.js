@@ -16,6 +16,7 @@ const correlateRoutes = require("./routes/correlate");
 const healthRoute = require("./routes/health");
 const authRoutes = require("./routes/auth");
 const protectedRoute = require("./routes/protected");
+const dashboardRoutes = require("./routes/dashboard");
 
 // Alerts
 const { scheduleDailyReports, sendCriticalAlert } = require("./utils/alertUtils");
@@ -41,6 +42,7 @@ app.use("/api/correlate", correlateRoutes); // Phase 6 enrichment
 app.use("/api/health", healthRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/protected", protectedRoute);
+app.use("/api/dashboard", dashboardRoutes);
 
 // ----------------------
 // DATABASE CONNECTION

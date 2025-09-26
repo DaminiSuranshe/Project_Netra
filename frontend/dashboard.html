@@ -1,43 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
-  <title>Project Netra Dashboard</title>
-  <link href="css/tailwind.css" rel="stylesheet">
+  <title>Threat Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
+<body class="bg-gray-900 text-white p-6">
+  <h1 class="text-3xl font-bold mb-6">Threat Intelligence Dashboard</h1>
 
-<body class="bg-gray-900 text-white">
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-4 gap-4 mb-8" id="summaryCards"></div>
 
-  <!-- Header -->
-  <header class="p-4 bg-gray-800 flex justify-between items-center">
-    <h1 class="text-2xl font-bold">Project Netra Dashboard</h1>
-    <button id="fetchThreatsBtn" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500">Fetch Latest Threats</button>
-  </header>
+  <!-- Charts -->
+  <div class="grid grid-cols-2 gap-8 mb-8">
+    <canvas id="severityChart"></canvas>
+    <canvas id="sourceChart"></canvas>
+  </div>
 
-  <!-- Fetch message -->
-  <div id="fetchMsg" class="p-2 text-center text-sm"></div>
+  <!-- Report Download -->
+  <a href="/api/dashboard/report/daily" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">📥 Download Daily Report</a>
 
-  <!-- Alert banner -->
-  <div id="alertBanner" class="hidden bg-red-700 text-white p-2 text-center font-bold rounded mb-2"></div>
+  <script>
+    async function fetchDashboard() {
+      const summaryRes = await fetch("/api/dashboard/summary");
+      const summaryData = await summaryRes.json();
 
-  <!-- Main Section -->
-  <section class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+      const severityCounts = summaryData.severityCounts.reduce((acc, curr) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      }, {});
 
-    <!-- Threat cards -->
-    <div class="col-span-2">
-      <div id="threatsCards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-    </div>
+      const sourceCounts = summaryData.sourceCounts.reduce((acc, curr) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      }, {});
 
-    <!-- Charts -->
-    <div>
-      <canvas id="topSourcesChart" class="mb-4"></canvas>
-      <canvas id="trendChart"></canvas>
-    </div>
-  </section>
+      // Render summary cards
+      const summaryCards = document.getElementById("summaryCards");
+      summaryCards.innerHTML = `
+        <div class="bg-gray-800 p-4 rounded-lg">Low: ${severityCounts.low || 0}</div>
+        <div class="bg-yellow-500 p-4 rounded-lg text-black">Medium: ${severityCounts.medium || 0}</div>
+        <div class="bg-red-600 p-4 rounded-lg">High: ${severityCounts.high || 0}</div>
+        <div class="bg-purple-600 p-4 rounded-lg">Critical: ${severityCounts.critical || 0}</div>
+      `;
 
-  <!-- JS -->
-  <script src="js/dashboard.js"></script>
+      // Severity Chart
+      const ctx1 = document.getElementById("severityChart").getContext("2d");
+      new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: ["Low", "Medium", "High", "Critical"],
+          datasets: [{
+            label: 'Threats by Severity',
+            data: [
+              severityCounts.low || 0,
+              severityCounts.medium || 0,
+              severityCounts.high || 0,
+              severityCounts.critical || 0
+            ],
+            backgroundColor: ['green','yellow','red','purple']
+          }]
+        }
+      });
+
+      // Source Chart
+      const ctx2 = document.getElementById("sourceChart").getContext("2d");
+      new Chart(ctx2, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(sourceCounts),
+          datasets: [{
+            label: 'Threats by Source',
+            data: Object.values(sourceCounts),
+            backgroundColor: Object.keys(sourceCounts).map(() => `hsl(${Math.random()*360}, 70%, 50%)`)
+          }]
+        }
+      });
+    }
+
+    fetchDashboard();
+  </script>
 </body>
 </html>
