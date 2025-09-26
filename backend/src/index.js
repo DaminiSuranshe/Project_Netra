@@ -20,8 +20,6 @@ const healthRoute = require("./routes/health");
 const authRoutes = require("./routes/auth");
 const protectedRoute = require("./routes/protected");
 const dashboardRoutes = require("./routes/dashboard");
-const authRoutes = require('./routes/auth');
-const dashboardRoutes = require('./routes/dashboard');
 const { authMiddleware } = require('./middleware/authMiddleware');
 
 const app = express();
