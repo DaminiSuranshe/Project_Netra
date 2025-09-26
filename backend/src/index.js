@@ -62,3 +62,19 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Backend running on http://localhost:${PORT}`);
 });
+
+
+const { sendCriticalAlert, scheduleDailyReports } = require('./utils/alertUtils');
+
+// Start scheduled daily reports
+scheduleDailyReports();
+
+// Example threat detection
+const threat = {
+  severity: 'high',
+  message: 'SQL Injection attempt detected',
+  details: 'UserID param exploited'
+};
+sendCriticalAlert(threat);
+
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
