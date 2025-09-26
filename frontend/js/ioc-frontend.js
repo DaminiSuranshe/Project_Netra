@@ -30,7 +30,7 @@ function getSeverityBadge(severity) {
 // ----------------------
 function renderCardResults(results) {
   iocResults.innerHTML = results.map((r, index) => `
-    <div class="bg-gray-800 p-4 rounded-lg shadow-md hover:scale-105 transform transition duration-200 cursor-pointer" 
+    <div class="bg-gray-800 p-4 rounded-lg shadow-md hover:scale-105 transform transition duration-200 cursor-pointer mb-4" 
          data-index="${index}" title="Click for details">
       <div class="flex justify-between items-center mb-2">
         <h3 class="font-bold text-lg truncate">${r.source} | ${r.type}</h3>
@@ -39,8 +39,12 @@ function renderCardResults(results) {
       <p title="Indicator"><span class="font-semibold">Indicator:</span> ${r.indicator}</p>
       ${r.reputation ? `<p title="Reputation Score"><span class="font-semibold">Reputation:</span> ${r.reputation}</p>` : ""}
       ${r.confidence !== undefined ? `<p title="Confidence Score"><span class="font-semibold">Confidence:</span> ${r.confidence}%</p>` : ""}
-      ${r.pulseCount !== undefined ? `<p title="OTX Pulse Count"><span class="font-semibold">OTX Pulses:</span> ${r.pulseCount}</p>` : ""}
-      ${r.lastAnalysisStats ? `<p title="VirusTotal Analysis"><span class="font-semibold">VT Analysis:</span> ${JSON.stringify(r.lastAnalysisStats)}</p>` : ""}
+      ${r.pulseCount !== undefined 
+        ? `<div class="overflow-auto max-h-24 bg-gray-700 p-2 rounded mt-2"><strong>OTX Pulses:</strong> ${r.pulseCount}</div>` 
+        : ""}
+      ${r.lastAnalysisStats 
+        ? `<div class="overflow-auto max-h-48 bg-gray-700 p-2 rounded mt-2"><strong>VT Analysis:</strong><pre class="text-xs">${JSON.stringify(r.lastAnalysisStats, null, 2)}</pre></div>` 
+        : ""}
     </div>
   `).join("");
 
@@ -71,7 +75,7 @@ function renderListResults(results) {
       <strong>Indicator:</strong> ${r.indicator} |
       ${r.reputation ? `<strong>Reputation:</strong> ${r.reputation} |` : ""}
       ${r.pulseCount !== undefined ? `<strong>Pulse Count:</strong> ${r.pulseCount} |` : ""}
-      ${r.lastAnalysisStats ? `<strong>VT Stats:</strong> ${JSON.stringify(r.lastAnalysisStats)}` : ""}
+      ${r.lastAnalysisStats ? `<strong>VT Stats:</strong><pre class="text-xs">${JSON.stringify(r.lastAnalysisStats, null, 2)}</pre>` : ""}
     `;
     resultsList.appendChild(li);
   });
