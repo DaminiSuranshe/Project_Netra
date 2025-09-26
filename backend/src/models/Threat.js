@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-const sendEmailAlert = require("../utils/email");
-const sendSlackAlert = require("../utils/slack");
+//const sendEmailAlert = require("../utils/email");
+//const sendSlackAlert = require("../utils/slack");
 
 const ThreatSchema = new mongoose.Schema({
   source: { type: String, required: true },

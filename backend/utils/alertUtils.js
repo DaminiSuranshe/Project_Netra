@@ -5,10 +5,14 @@ const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
 
-// Slack webhook
+// ----------------------
+// SLACK WEBHOOK
+// ----------------------
 const slackWebhook = new IncomingWebhook(process.env.SLACK_WEBHOOK_URL);
 
-// Nodemailer transporter
+// ----------------------
+// EMAIL TRANSPORTER
+// ----------------------
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -17,44 +21,54 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-/**
- * Send critical Slack + Email alert
- */
+// ----------------------
+// SEND CRITICAL ALERT
+// ----------------------
 async function sendCriticalAlert(threat) {
-  if (threat.severity !== 'high') return;
+  if (threat.severity.toLowerCase() !== 'high') return;
 
   const alertMessage = `
 🚨 CRITICAL THREAT DETECTED 🚨
 Severity: ${threat.severity}
-Message: ${threat.message}
-Details: ${threat.details || 'N/A'}
+Source: ${threat.source}
+Type: ${threat.type}
+IOC/Indicator: ${threat.indicator || 'N/A'}
+Description/Details: ${threat.description || 'N/A'}
 Time: ${new Date().toLocaleString()}
   `;
 
   try {
+    console.log("📧 Sending email alert to:", process.env.ADMIN_EMAILS);
+    console.log("💬 Sending Slack alert to webhook:", process.env.SLACK_WEBHOOK_URL);
+
     // Slack alert
     await slackWebhook.send({ text: alertMessage });
 
     // Email alert
     await transporter.sendMail({
       from: `"Threat Alert System" <${process.env.ALERT_EMAIL_USER}>`,
-      to: process.env.ADMIN_EMAILS,
+      to: process.env.ADMIN_EMAILS.split(","),
       subject: "🚨 Critical Threat Detected",
       text: alertMessage
     });
 
     console.log("✅ Critical alert sent via Slack & Email");
   } catch (error) {
-    console.error("❌ Failed to send alert:", error);
+    console.error("❌ Failed to send critical alert:", error);
   }
 }
 
-/**
- * Send daily report as email (attaches CSV)
- */
+// ----------------------
+// SEND DAILY REPORT
+// ----------------------
 async function sendDailyReport() {
   try {
     const reportPath = path.join(__dirname, '../exports/daily_report.csv');
+
+    // Ensure exports folder exists
+    if (!fs.existsSync(path.dirname(reportPath))) {
+      fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+    }
 
     // Ensure file exists
     if (!fs.existsSync(reportPath)) {
@@ -64,7 +78,7 @@ async function sendDailyReport() {
 
     await transporter.sendMail({
       from: `"Threat Report System" <${process.env.ALERT_EMAIL_USER}>`,
-      to: process.env.ADMIN_EMAILS,
+      to: process.env.ADMIN_EMAILS.split(","),
       subject: "📊 Daily Threat Report",
       text: "Please find attached the daily threat report.",
       attachments: [
@@ -81,9 +95,9 @@ async function sendDailyReport() {
   }
 }
 
-/**
- * Schedule daily report (8 AM every day)
- */
+// ----------------------
+// SCHEDULE DAILY REPORTS (8 AM)
+// ----------------------
 function scheduleDailyReports() {
   cron.schedule('0 8 * * *', () => {
     console.log("📅 Sending scheduled daily report...");
