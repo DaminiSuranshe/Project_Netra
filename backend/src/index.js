@@ -37,6 +37,12 @@ app.use("/api/health", healthRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/protected", protectedRoute);
 
+
+const { scheduleDailyReports } = require("./utils/alertUtils");
+
+// Start scheduled daily reports (8 AM every day)
+scheduleDailyReports();
+
 // ----------------------
 // DATABASE CONNECTION
 // ----------------------
