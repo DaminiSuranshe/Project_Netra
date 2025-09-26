@@ -2,84 +2,166 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Threat Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- TailwindCSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    #map { height: 400px; }
+    #alertBanner {
+      position: fixed;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      display: none;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
 </head>
-<body class="bg-gray-900 text-white p-6">
-  <h1 class="text-3xl font-bold mb-6">Threat Intelligence Dashboard</h1>
+<body class="bg-gray-900 text-white">
 
-  <!-- Summary Cards -->
-  <div class="grid grid-cols-4 gap-4 mb-8" id="summaryCards"></div>
+  <!-- Alert Banner -->
+  <div id="alertBanner" class="bg-red-600 text-white px-4 py-2 rounded shadow-lg font-bold"></div>
 
-  <!-- Charts -->
-  <div class="grid grid-cols-2 gap-8 mb-8">
-    <canvas id="severityChart"></canvas>
-    <canvas id="sourceChart"></canvas>
-  </div>
+  <header class="p-4 bg-gray-800 text-xl font-bold text-center">
+    Threat Intelligence Dashboard
+  </header>
 
-  <!-- Report Download -->
-  <a href="/api/dashboard/report/daily" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">📥 Download Daily Report</a>
+  <main class="p-4 grid gap-6">
+
+    <!-- Map Section -->
+    <section>
+      <h2 class="text-lg font-semibold mb-2">Threat Map</h2>
+      <div id="map" class="rounded-lg shadow-md"></div>
+    </section>
+
+    <!-- Threat Cards Section -->
+    <section>
+      <h2 class="text-lg font-semibold mb-2">Recent Threats</h2>
+      <div id="threatCards" class="space-y-2"></div>
+    </section>
+
+  </main>
 
   <script>
-    async function fetchDashboard() {
-      const summaryRes = await fetch("/api/dashboard/summary");
-      const summaryData = await summaryRes.json();
+    const map = L.map('map').setView([20, 0], 2);
+    window.map = map;
 
-      const severityCounts = summaryData.severityCounts.reduce((acc, curr) => {
-        acc[curr._id] = curr.count;
-        return acc;
-      }, {});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-      const sourceCounts = summaryData.sourceCounts.reduce((acc, curr) => {
-        acc[curr._id] = curr.count;
-        return acc;
-      }, {});
+    const threatCardsContainer = document.getElementById("threatCards");
+    const alertBanner = document.getElementById("alertBanner");
+    let mapMarkersLayer = [];
+    let lastThreatIds = new Set();
 
-      // Render summary cards
-      const summaryCards = document.getElementById("summaryCards");
-      summaryCards.innerHTML = `
-        <div class="bg-gray-800 p-4 rounded-lg">Low: ${severityCounts.low || 0}</div>
-        <div class="bg-yellow-500 p-4 rounded-lg text-black">Medium: ${severityCounts.medium || 0}</div>
-        <div class="bg-red-600 p-4 rounded-lg">High: ${severityCounts.high || 0}</div>
-        <div class="bg-purple-600 p-4 rounded-lg">Critical: ${severityCounts.critical || 0}</div>
-      `;
+    // ----------------------
+    // Fetch latest threats
+    // ----------------------
+    async function fetchLatestThreats() {
+      try {
+        const res = await fetch("/api/threats/latest?limit=50");
+        const data = await res.json();
+        if (!data.results) return;
 
-      // Severity Chart
-      const ctx1 = document.getElementById("severityChart").getContext("2d");
-      new Chart(ctx1, {
-        type: 'bar',
-        data: {
-          labels: ["Low", "Medium", "High", "Critical"],
-          datasets: [{
-            label: 'Threats by Severity',
-            data: [
-              severityCounts.low || 0,
-              severityCounts.medium || 0,
-              severityCounts.high || 0,
-              severityCounts.critical || 0
-            ],
-            backgroundColor: ['green','yellow','red','purple']
-          }]
-        }
-      });
+        checkNewHighAlerts(data.results);
+        renderThreatCards(data.results);
+        renderMapMarkers(data.results);
 
-      // Source Chart
-      const ctx2 = document.getElementById("sourceChart").getContext("2d");
-      new Chart(ctx2, {
-        type: 'pie',
-        data: {
-          labels: Object.keys(sourceCounts),
-          datasets: [{
-            label: 'Threats by Source',
-            data: Object.values(sourceCounts),
-            backgroundColor: Object.keys(sourceCounts).map(() => `hsl(${Math.random()*360}, 70%, 50%)`)
-          }]
+      } catch (err) {
+        console.error("❌ Failed to fetch latest threats:", err);
+      }
+    }
+
+    // ----------------------
+    // Check for new high-severity threats
+    // ----------------------
+    function checkNewHighAlerts(threats) {
+      threats.forEach(t => {
+        if (["high", "critical"].includes(t.severity?.toLowerCase()) && !lastThreatIds.has(t._id)) {
+          showAlertBanner(`⚠️ New ${t.severity.toUpperCase()} Threat: ${t.indicator}`);
+          lastThreatIds.add(t._id);
         }
       });
     }
 
-    fetchDashboard();
+    // ----------------------
+    // Show banner
+    // ----------------------
+    function showAlertBanner(message) {
+      alertBanner.textContent = message;
+      alertBanner.style.display = "block";
+      setTimeout(() => { alertBanner.style.display = "none"; }, 5000);
+    }
+
+    // ----------------------
+    // Render threat cards
+    // ----------------------
+    function renderThreatCards(threats) {
+      if (!threatCardsContainer) return;
+      threatCardsContainer.innerHTML = threats
+        .map(t => `
+          <div class="bg-gray-800 p-4 rounded-lg shadow-md hover:scale-105 transform transition duration-200">
+            <div class="flex justify-between items-center mb-1">
+              <h3 class="font-bold text-lg truncate">${t.source} | ${t.type}</h3>
+              <span class="${getSeverityClass(t.severity)} px-2 py-1 rounded-full text-xs font-semibold">
+                ${t.severity?.toUpperCase() || "UNKNOWN"}
+              </span>
+            </div>
+            <p><strong>Indicator:</strong> ${t.indicator}</p>
+            <p><strong>Message:</strong> ${t.message}</p>
+          </div>
+        `).join("");
+    }
+
+    // ----------------------
+    // Map marker rendering
+    // ----------------------
+    function renderMapMarkers(threats) {
+      mapMarkersLayer.forEach(marker => marker.remove());
+      mapMarkersLayer = [];
+
+      threats.forEach(t => {
+        if (t.geo?.latitude && t.geo?.longitude) {
+          const marker = L.marker([t.geo.latitude, t.geo.longitude])
+            .bindPopup(`<strong>${t.source}</strong><br>${t.type}<br>${t.indicator}<br>${t.severity?.toUpperCase()}`);
+          marker.addTo(map);
+          mapMarkersLayer.push(marker);
+        }
+      });
+    }
+
+    // ----------------------
+    // Severity badge helper
+    // ----------------------
+    function getSeverityClass(severity) {
+      switch (severity?.toLowerCase()) {
+        case "high": return "bg-red-600 text-white";
+        case "medium": return "bg-yellow-500 text-black";
+        case "low": return "bg-green-600 text-white";
+        case "critical": return "bg-purple-700 text-white";
+        default: return "bg-gray-700 text-white";
+      }
+    }
+
+    // ----------------------
+    // Initial fetch & refresh
+    // ----------------------
+    fetchLatestThreats();
+    setInterval(fetchLatestThreats, 10000); // refresh every 10s
+
   </script>
+
 </body>
 </html>

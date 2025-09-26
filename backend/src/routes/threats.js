@@ -308,4 +308,25 @@ router.get("/export/excel", async (req, res) => {
   }
 });
 
+// ----------------------
+// GET /api/threats/latest
+// Returns latest threats for dashboard (limit 50 by default)
+// ----------------------
+router.get("/latest", async (req, res) => {
+  try {
+    // Optional: allow query param to limit results
+    const limit = parseInt(req.query.limit) || 50;
+
+    const threats = await Threat.find()
+      .sort({ date: -1 })       // newest first
+      .limit(limit)
+      .select("source type indicator severity message geo confidenceScore pulseCount"); // only needed fields
+
+    res.json({ results: threats });
+  } catch (err) {
+    console.error("❌ Failed to fetch latest threats:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
