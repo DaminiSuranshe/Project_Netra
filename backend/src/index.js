@@ -1,16 +1,15 @@
-// src/index.js
-
 // ----------------------
 // IMPORTS
 // ----------------------
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const bodyParser = require("body-parser");
+
 const connectDB = require("./config/db");
+
+// Models
 const Threat = require("./models/Threat");
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-require('dotenv').config();
 
 // Routes
 const threatRoutes = require("./routes/threats");
@@ -20,10 +19,9 @@ const healthRoute = require("./routes/health");
 const authRoutes = require("./routes/auth");
 const protectedRoute = require("./routes/protected");
 const dashboardRoutes = require("./routes/dashboard");
-const { authMiddleware } = require('./middleware/authMiddleware');
 
-const app = express();
-app.use(bodyParser.json());
+// Middleware
+const authMiddleware = require("./middlewares/authMiddleware");
 
 // Alerts
 const { scheduleDailyReports, sendCriticalAlert } = require("./utils/alertUtils");
@@ -33,38 +31,24 @@ const { scheduleDailyReports, sendCriticalAlert } = require("./utils/alertUtils"
 // ----------------------
 dotenv.config();
 
-// ----------------------
-// MIDDLEWARE
-// ----------------------
+const app = express();
 app.use(cors());
+app.use(bodyParser.json());
 app.use(express.json());
-app.use("/api/threats", threatRoutes);
 
 // ----------------------
 // ROUTES
 // ----------------------
+app.use("/api/threats", threatRoutes);
 app.use("/api/ioc", iocRoutes);
-app.use("/api/threats", threatRoutes);       // Phase 3 + 4 threat fetch & storage
-app.use("/api/correlate", correlateRoutes); // Phase 6 enrichment
+app.use("/api/correlate", correlateRoutes);
 app.use("/api/health", healthRoute);
 app.use("/api/auth", authRoutes);
 app.use("/api/protected", protectedRoute);
-app.use("/api/dashboard", dashboardRoutes);
-app.use('/auth', authRoutes);
-app.use('/dashboard', authMiddleware, dashboardRoutes);
+app.use("/api/dashboard", authMiddleware, dashboardRoutes);
 
 // ----------------------
-// DATABASE CONNECTION
-// ----------------------
-connectDB();
-
-// ----------------------
-// SCHEDULE DAILY REPORTS (8 AM every day)
-// ----------------------
-scheduleDailyReports();
-
-// ----------------------
-// TEMP TEST ROUTE (Insert & Retrieve Threats)
+// TEMP TEST ROUTE
 // ----------------------
 app.get("/api/testdb", async (req, res) => {
   try {
@@ -84,7 +68,22 @@ app.get("/api/testdb", async (req, res) => {
 });
 
 // ----------------------
-// EXAMPLE MANUAL ALERT (OPTIONAL)
+// DATABASE CONNECTION & SERVER START
+// ----------------------
+connectDB()
+  .then(() => {
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
+  })
+  .catch(err => console.error("MongoDB connection failed:", err));
+
+// ----------------------
+// SCHEDULE DAILY REPORTS
+// ----------------------
+scheduleDailyReports();
+
+// ----------------------
+// OPTIONAL: MANUAL ALERT
 // ----------------------
 async function testManualAlert() {
   const threat = {
@@ -98,20 +97,4 @@ async function testManualAlert() {
   await sendCriticalAlert(threat);
 }
 
-// Uncomment to test manual alert once
-// testManualAlert();
-
-// ----------------------
-// START SERVER
-// ----------------------
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`✅ Backend running on http://localhost:${PORT}`);
-});
-
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.error(err));
-
-app.listen(3000, () => console.log("🚀 Server running on http://localhost:3000"));
-
+// testManualAlert(); // Uncomment to test once

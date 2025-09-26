@@ -7,16 +7,24 @@ const UserSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'admin'], default: 'user' }
 });
 
-// Hash password before saving
+// ----------------------
+// HASH PASSWORD BEFORE SAVING
+// ----------------------
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
+  try {
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
-// Compare password method
+// ----------------------
+// COMPARE PASSWORD METHOD
+// ----------------------
 UserSchema.methods.comparePassword = async function (password) {
-  return await bcrypt.compare(password, this.password);
+  return bcrypt.compare(password, this.password);
 };
 
 module.exports = mongoose.model('User', UserSchema);
