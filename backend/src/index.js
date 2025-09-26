@@ -61,14 +61,18 @@ app.get("/api/testdb", async (req, res) => {
 // ----------------------
 // START ALERTS
 // ----------------------
-scheduleDailyReports(); // Start daily report scheduler
+// Start daily reports at 8 AM every day
+scheduleDailyReports();
 
-// Example threat alert (optional test)
+// Example: immediate test alert
 const testThreat = {
-  severity: 'high',
-  message: 'SQL Injection attempt detected',
-  details: 'UserID param exploited'
+  severity: "high",
+  indicator: "192.168.1.10",
+  source: "Test System",
+  message: "SQL Injection attempt",
+  details: "Detected in login endpoint",
 };
+
 sendCriticalAlert(testThreat);
 
 // ----------------------

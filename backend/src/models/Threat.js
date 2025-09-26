@@ -1,22 +1,21 @@
 const mongoose = require("mongoose");
-const { sendEmailAlert } = require("../utils/email");
-const { sendSlackAlert } = require("../utils/slack");
+const { sendCriticalAlert } = require("../utils/alertUtils"); // Correct relative path
 
 const ThreatSchema = new mongoose.Schema({
-  source: { type: String, required: true, default: "Unknown" },
-  type: { type: String, required: true, default: "Unknown" },
-  indicator: { type: String, required: true, default: "N/A" },
-  description: { type: String, default: "N/A" },
+  source: { type: String, required: true },
+  type: { type: String, required: true },
+  indicator: { type: String, required: true },
+  description: { type: String },
   severity: { type: String, enum: ["low", "medium", "high", "critical"], default: "medium" },
   date: { type: Date, default: Date.now },
 
   // Phase 6 enrichment fields
   geo: {
-    country: { type: String, default: "N/A" },
-    region: { type: String, default: "N/A" },
-    city: { type: String, default: "N/A" },
-    latitude: { type: Number, default: 0 },
-    longitude: { type: Number, default: 0 },
+    country: String,
+    region: String,
+    city: String,
+    latitude: Number,
+    longitude: Number,
   },
   confidenceScore: { type: Number, default: 50 },
   correlatedSources: { type: [String], default: [] },
@@ -26,29 +25,14 @@ const ThreatSchema = new mongoose.Schema({
   details: { type: String, default: "N/A" },
 });
 
-// ----------------------
-// Post-save hook: trigger alerts
-// ----------------------
+// Trigger alerts after saving a new threat
 ThreatSchema.post("save", async function (doc) {
-  if (!doc) return;
-
-  // Only trigger for high or critical threats
-  if (doc.severity.toLowerCase() === "high" || doc.severity.toLowerCase() === "critical") {
-    console.log(`🚨 ALERT TRIGGERED: ${doc.indicator} (${doc.severity})`);
-
-    // Wrap each alert in try/catch to prevent one failure from blocking the other
+  if (doc.severity === "high" || doc.severity === "critical") {
+    console.log(`🚨 ALERT: ${doc.indicator} (${doc.severity})`);
     try {
-      await sendEmailAlert(doc);
-      console.log("✅ Email alert sent successfully");
+      await sendCriticalAlert(doc); // Sends Slack + Email
     } catch (err) {
-      console.error("❌ Email alert failed:", err.message);
-    }
-
-    try {
-      await sendSlackAlert(doc);
-      console.log("✅ Slack alert sent successfully");
-    } catch (err) {
-      console.error("❌ Slack alert failed:", err.message);
+      console.error("Failed to send alert:", err.message);
     }
   }
 });
