@@ -7,29 +7,35 @@ const path = require("path");
 // ----------------------
 // SLACK WEBHOOK SETUP
 // ----------------------
-let slackWebhook;
-const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+let slackWebhook = null;
+const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL?.trim();
+
 if (slackWebhookUrl) {
   const { IncomingWebhook } = require("@slack/webhook");
   slackWebhook = new IncomingWebhook(slackWebhookUrl);
 } else {
-  console.warn("⚠️ SLACK_WEBHOOK_URL not defined. Slack alerts will be skipped.");
+  console.warn(
+    "⚠️ SLACK_WEBHOOK_URL not defined or empty. Slack alerts will be skipped."
+  );
 }
 
 // ----------------------
-// EMAIL TRANSPORTER
+// EMAIL TRANSPORTER SETUP
 // ----------------------
-let transporter;
-if (process.env.ALERT_EMAIL_USER && process.env.ALERT_EMAIL_PASS) {
+let transporter = null;
+const EMAIL_USER = process.env.ALERT_EMAIL_USER?.trim();
+const EMAIL_PASS = process.env.ALERT_EMAIL_PASS?.trim();
+const EMAIL_TO = process.env.ALERT_EMAIL_TO?.trim() || EMAIL_USER;
+
+if (EMAIL_USER && EMAIL_PASS) {
   transporter = nodemailer.createTransport({
     service: "gmail",
-    auth: {
-      user: process.env.ALERT_EMAIL_USER,
-      pass: process.env.ALERT_EMAIL_PASS,
-    },
+    auth: { user: EMAIL_USER, pass: EMAIL_PASS },
   });
 } else {
-  console.warn("⚠️ ALERT_EMAIL_USER or ALERT_EMAIL_PASS not defined. Email alerts will be skipped.");
+  console.warn(
+    "⚠️ ALERT_EMAIL_USER or ALERT_EMAIL_PASS not defined or empty. Email alerts will be skipped."
+  );
 }
 
 // ----------------------
@@ -49,29 +55,29 @@ Time: ${new Date().toLocaleString()}
 `;
 
   // ---- Slack ----
-  try {
-    if (slackWebhook) {
+  if (slackWebhook) {
+    try {
       await slackWebhook.send({ text: alertText });
       console.log("✅ Slack alert sent");
+    } catch (err) {
+      console.error("❌ Slack alert failed:", err.message);
     }
-  } catch (err) {
-    console.error("❌ Slack alert failed:", err);
   }
 
   // ---- Email ----
-  try {
-    if (transporter) {
+  if (transporter) {
+    try {
       const mailOptions = {
-        from: `"Threat Alert System" <${process.env.ALERT_EMAIL_USER}>`,
-        to: process.env.ALERT_EMAIL_TO || process.env.ALERT_EMAIL_USER,
+        from: `"Threat Alert System" <${EMAIL_USER}>`,
+        to: EMAIL_TO,
         subject: `🚨 Critical Threat Detected: ${threat.indicator || "Unknown"}`,
         text: alertText,
       };
       const info = await transporter.sendMail(mailOptions);
       console.log("✅ Email alert sent:", info.response);
+    } catch (err) {
+      console.error("❌ Email alert failed:", err.message);
     }
-  } catch (err) {
-    console.error("❌ Email alert failed:", err);
   }
 }
 
@@ -79,33 +85,28 @@ Time: ${new Date().toLocaleString()}
 // SEND DAILY REPORT
 // ----------------------
 async function sendDailyReport() {
+  const reportPath = path.join(__dirname, "../exports/daily_report.csv");
+
+  if (!fs.existsSync(reportPath)) {
+    console.warn("⚠️ Daily report file not found:", reportPath);
+    return;
+  }
+
+  if (!transporter) return;
+
   try {
-    const reportPath = path.join(__dirname, "../exports/daily_report.csv");
-
-    if (!fs.existsSync(reportPath)) {
-      console.warn("⚠️ Daily report file not found:", reportPath);
-      return;
-    }
-
-    if (!transporter) return;
-
     const mailOptions = {
-      from: `"Threat Report System" <${process.env.ALERT_EMAIL_USER}>`,
-      to: process.env.ALERT_EMAIL_TO || process.env.ALERT_EMAIL_USER,
+      from: `"Threat Report System" <${EMAIL_USER}>`,
+      to: EMAIL_TO,
       subject: "📊 Daily Threat Report",
       text: "Please find attached the daily threat report.",
-      attachments: [
-        {
-          filename: "daily_report.csv",
-          path: reportPath,
-        },
-      ],
+      attachments: [{ filename: "daily_report.csv", path: reportPath }],
     };
 
     const info = await transporter.sendMail(mailOptions);
     console.log("✅ Daily report emailed:", info.response);
   } catch (err) {
-    console.error("❌ Failed to send daily report:", err);
+    console.error("❌ Failed to send daily report:", err.message);
   }
 }
 

@@ -1,13 +1,21 @@
+// utils/email.js
 const nodemailer = require("nodemailer");
 
-// Create transporter using Gmail (or any SMTP)
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.ALERT_EMAIL_USER,
-    pass: process.env.ALERT_EMAIL_PASS, // App password recommended
-  },
-});
+const EMAIL_USER = process.env.ALERT_EMAIL_USER?.trim();
+const EMAIL_PASS = process.env.ALERT_EMAIL_PASS?.trim();
+const EMAIL_TO = process.env.ALERT_EMAIL_TO?.trim() || EMAIL_USER;
+
+let transporter = null;
+if (EMAIL_USER && EMAIL_PASS) {
+  transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+  });
+} else {
+  console.warn(
+    "⚠️ ALERT_EMAIL_USER or ALERT_EMAIL_PASS not defined. Email alerts will be skipped."
+  );
+}
 
 /**
  * Send Email Alert for high-severity threat
@@ -15,33 +23,26 @@ const transporter = nodemailer.createTransport({
  */
 async function sendEmailAlert(threat) {
   if (!threat) return;
+  if (!transporter) return;
 
-  // Prepare email content
-  const subject = `🚨 Critical Threat Detected: ${threat.indicator}`;
+  const subject = `🚨 Critical Threat Detected: ${threat.indicator || "Unknown"}`;
   const text = `
 🚨 CRITICAL THREAT DETECTED 🚨
-Severity: ${threat.severity}
-Indicator: ${threat.indicator}
-Source: ${threat.source}
-Message: ${threat.message}
-Details: ${threat.details}
+Severity: ${threat.severity || "N/A"}
+Indicator: ${threat.indicator || "N/A"}
+Source: ${threat.source || "N/A"}
+Message: ${threat.message || "N/A"}
+Details: ${threat.details || "N/A"}
 Time: ${new Date().toLocaleString()}
-  `;
+`;
 
-  const mailOptions = {
-    from: `"Threat Alert System" <${process.env.ALERT_EMAIL_USER}>`,
-    to: process.env.ALERT_EMAIL_TO || process.env.ALERT_EMAIL_USER, // fallback to sender
-    subject,
-    text,
-  };
+  const mailOptions = { from: `"Threat Alert System" <${EMAIL_USER}>`, to: EMAIL_TO, subject, text };
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Email sent:", info.response);
-    console.log("To:", mailOptions.to);
-    console.log("Content:", text);
+    console.log("✅ Email alert sent:", info.response);
   } catch (err) {
-    console.error("❌ Failed to send email alert:", err);
+    console.error("❌ Failed to send email alert:", err.message);
   }
 }
 

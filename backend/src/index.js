@@ -21,7 +21,7 @@ const protectedRoute = require("./routes/protected");
 const dashboardRoutes = require("./routes/dashboard");
 
 // Middleware
-const authMiddleware = require("./middlewares/authMiddleware");
+const authMiddleware = require("./middleware/authMiddleware");
 
 // Alerts
 const { scheduleDailyReports, sendCriticalAlert } = require("./utils/alertUtils");

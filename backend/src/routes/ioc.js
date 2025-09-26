@@ -3,7 +3,7 @@ const Threat = require("../models/Threat");
 const { Parser } = require("json2csv");
 
 // Correct path to your middleware
-const authMiddleware = require("../middlewares/authMiddleware");
+const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
